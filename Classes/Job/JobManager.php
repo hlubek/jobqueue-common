@@ -73,13 +73,15 @@ class JobManager
                 $queue->finish($message);
             } catch (\Exception $exception) {
                 $queue->finish($message);
-                throw new JobQueueException('Job execution for "' . $message->getIdentifier() . '" threw an exception', 1446806185, $exception);
+                $messageString = ($message->getIdentifier() ? ' for "' . $message->getIdentifier() . '"' : '');
+                throw new JobQueueException('Job execution' . $messageString . ' threw an exception', 1446806185, $exception);
             }
 
             if ($success) {
                 return $job;
             } else {
-                throw new JobQueueException('Job execution for "' . $message->getIdentifier() . '" failed', 1334056583);
+                $messageString = ($message->getIdentifier() ? ' for "' . $message->getIdentifier() . '"' : '');
+                throw new JobQueueException('Job execution' . $messageString . ' failed', 1334056583);
             }
         }
 

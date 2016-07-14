@@ -16,12 +16,14 @@ use TYPO3\Flow\Cli\CommandController;
 use Flowpack\JobQueue\Common\Exception as JobQueueException;
 use Flowpack\JobQueue\Common\Job\JobManager;
 use Flowpack\JobQueue\Common\Queue\QueueManager;
+use TYPO3\Flow\Exception;
 
 /**
  * Job command controller
  */
 class JobCommandController extends CommandController
 {
+
     /**
      * @Flow\Inject
      * @var JobManager
@@ -35,6 +37,12 @@ class JobCommandController extends CommandController
     protected $queueManager;
 
     /**
+     * @Flow\Inject
+     * @var \TYPO3\Flow\Log\SystemLoggerInterface
+     */
+    protected $systemLogger;
+
+    /**
      * Work on a queue and execute jobs
      *
      * @param string $queueName The name of the queue
@@ -46,12 +54,21 @@ class JobCommandController extends CommandController
             try {
                 $this->jobManager->waitAndExecute($queueName);
             } catch (JobQueueException $exception) {
-                $this->outputLine($exception->getMessage());
-                if ($exception->getPrevious() instanceof \Exception) {
-                    $this->outputLine($exception->getPrevious()->getMessage());
+                $this->outputLine('<error>' . $exception->getMessage() . '</error>');
+                $nestedException = $exception->getPrevious();
+                if ($nestedException instanceof \Exception) {
+                    // TODO Add logged exception reference
+                    $this->outputLine($nestedException->getMessage());
+                    $this->systemLogger->logException($nestedException, array('queueName' => $queueName));
+                    $referenceCodeString = ($nestedException instanceof Exception ? ' as ' . $nestedException->getReferenceCode() . '.txt' : '');
+                    $this->outputLine('<em>Exception logged' . $referenceCodeString . '</em>');
                 }
             } catch (\Exception $exception) {
-                $this->outputLine('Unexpected exception during job execution: %s', array($exception->getMessage()));
+                // TODO Add logged exception reference
+                $this->outputLine('<error>Unexpected exception during job execution:</error> %s', array($exception->getMessage()));
+                $this->systemLogger->logException($exception, array('queueName' => $queueName));
+                $referenceCodeString = ($exception instanceof Exception ? ' as ' . $exception->getReferenceCode() . '.txt' : '');
+                $this->outputLine('<em>Exception logged' . $referenceCodeString . '</em>');
             }
         } while (true);
     }
